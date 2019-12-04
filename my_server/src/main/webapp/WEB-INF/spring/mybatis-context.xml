@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<bean id="propertyPlaceholderConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<!-- 수정 -->
+		<property name="locations">
+			<value>/WEB-INF/spring/mariadb.properties</value>
+		</property>
+	</bean>
+	
+	<!-- 파일 읽기 위한 - MULTI PART -->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver" />
+
+	<bean id="dataSourceSpied" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<!-- jdbc로 읽어온 정보를 매핑시켜 가지고 있는 빈 -->
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="validationQuery" value="select 1"/>
+	</bean>
+
+	<bean id="dataSource" class="net.sf.log4jdbc.Log4jdbcProxyDataSource">
+		<constructor-arg ref="dataSourceSpied" />
+		<property name="logFormatter">
+			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">
+				<property name="loggingType" value="MULTI_LINE" />
+				<property name="sqlPrefix" value="SQL         :  " />
+			</bean>
+		</property>
+	</bean>
+
+	<!-- 수정 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<!-- //데이터베이스 정보 -->
+		<property name="mapperLocations" value="classpath:com/lyg/my_server/Map/*.xml" />
+		<!-- //매퍼 xml이 있는 경로 정의 -->
+		<property name="configLocation" value="/WEB-INF/spring/mybatis-config.xml" />
+		<!-- //mybatis config설정 이있는 xml 참조하는 곳 추후 포스팅할때 설명 -->
+		<property name="transactionFactory">
+			<!-- //트랜젝션에 관련된 내용 추후 설명 -->
+			<bean
+				class="org.apache.ibatis.transaction.managed.ManagedTransactionFactory" />
+		</property>
+	</bean>
+
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+	</bean>
+
+	<!-- =========================== DAO DEFINITIONS : IBATIS IMPLEMENTATIONS 
+		============ -->
+	<!-- 수정 -->
+	<!-- bean=id는 controller의 @Resource(name = "customerDaoImpl")와 일치해야 함 -->
+	<bean id="myDaoImpl" class="com.lyg.my_server.Dao.myDaoImpl">
+		<!-- //DB 연결하는 빈을 설정 아래와 같이 봐야한다. -->
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+</beans>
